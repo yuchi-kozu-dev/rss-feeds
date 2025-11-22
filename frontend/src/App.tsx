@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { Article } from './types';
 import { ArticleCard } from './components/ArticleCard';
@@ -10,6 +10,7 @@ function App() {
     const [articles, setArticles] = useState<Article[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedFeed, setSelectedFeed] = useState<string>('All');
 
     const fetchArticles = async () => {
         setLoading(true);
@@ -35,76 +36,92 @@ function App() {
         fetchArticles();
     }, []);
 
+    const uniqueFeeds = useMemo(() => {
+        const feeds = new Set(articles.map(article => article.feedTitle));
+        return Array.from(feeds).sort();
+    }, [articles]);
+
+    const filteredArticles = useMemo(() => {
+        if (selectedFeed === 'All') return articles;
+        return articles.filter(article => article.feedTitle === selectedFeed);
+    }, [articles, selectedFeed]);
+
     return (
         <div className="app">
-            <header className="app-header">
-                <h1>📰 RSS Feed Reader</h1>
-                <button
-                    onClick={fetchArticles}
-                    disabled={loading}
-                    className="refresh-button"
-                >
-                    {loading ? '更新中...' : '🔄 更新'}
-                </button>
-            </header>
-
-            <main className="app-main">
-                {error && (
-                    <div className="error-message">
-                        ❌ {error}
-                    </div>
-                )}
-
-                {loading && articles.length === 0 && (
-                    <div className="loading-message">
-                        ⏳ 記事を読み込んでいます...
-                    </div>
-                )}
-
-                {!loading && articles.length === 0 && !error && (
-                    <div className="empty-message">
-                        記事がありません
-                    </div>
-                )}
-
-                <div className="articles-container">
-                    {articles.map((article, index) => (
-                        <ArticleCard key={`${article.link}-${index}`} article={article} />
+            <aside className="sidebar">
+                <div className="sidebar-header">
+                    <h2>Feeds</h2>
+                </div>
+                <nav className="sidebar-nav">
+                    <button
+                        className={`nav-item ${selectedFeed === 'All' ? 'active' : ''}`}
+                        onClick={() => setSelectedFeed('All')}
+                    >
+                        <span className="icon">📑</span>
+                        All Articles
+                    </button>
+                    <div className="nav-divider"></div>
+                    {uniqueFeeds.map(feed => (
+                        <button
+                            key={feed}
+                            className={`nav-item ${selectedFeed === feed ? 'active' : ''}`}
+                            onClick={() => setSelectedFeed(feed)}
+                        >
+                            <span className="icon">
+                                {feed.toLowerCase().includes('zenn') ? '📘' :
+                                    feed.toLowerCase().includes('qiita') ? '📗' :
+                                        feed.toLowerCase().includes('youtube') ? '📺' : '📰'}
+                            </span>
+                            {feed}
+                        </button>
                     ))}
+                </nav>
+                <div className="sidebar-footer">
+                    <button onClick={fetchArticles} disabled={loading} className="refresh-button-mini">
+                        {loading ? 'Updating...' : '🔄 Refresh'}
+                    </button>
                 </div>
+            </aside>
 
-                {articles.length > 0 && (
-                    <div className="article-count">
-                        全 {articles.length} 件の記事
+            <main className="main-content">
+                <header className="content-header">
+                    <h1>{selectedFeed === 'All' ? 'Latest Articles' : selectedFeed}</h1>
+                    <span className="article-count-badge">
+                        {filteredArticles.length} articles
+                    </span>
+                </header>
+
+                <div className="scrollable-content">
+                    {error && (
+                        <div className="error-message">
+                            ❌ {error}
+                        </div>
+                    )}
+
+                    {loading && articles.length === 0 && (
+                        <div className="loading-message">
+                            <div className="spinner"></div>
+                            <p>Loading your feeds...</p>
+                        </div>
+                    )}
+
+                    {!loading && filteredArticles.length === 0 && !error && (
+                        <div className="empty-message">
+                            <p>No articles found.</p>
+                        </div>
+                    )}
+
+                    <div className="articles-grid">
+                        {filteredArticles.map((article, index) => (
+                            <ArticleCard key={`${article.link}-${index}`} article={article} />
+                        ))}
                     </div>
-                )}
+
+                    <footer className="content-footer">
+                        <p>© 2025 RSS Feed Reader. Powered by various tech blogs.</p>
+                    </footer>
+                </div>
             </main>
-
-            <footer className="app-footer">
-                <div className="footer-content">
-                    <div className="disclaimer">
-                        <h3>免責事項</h3>
-                        <p>
-                            本サービスは、各RSSフィードから記事情報を取得し、タイトルと要約のみを表示しています。
-                            記事の全文は元サイトでご覧ください。すべての著作権は各記事の著者および提供元に帰属します。
-                        </p>
-                    </div>
-                    <div className="credits">
-                        <h3>データ提供元</h3>
-                        <p>
-                            Qiita, Zenn, Hugging Face Blog, Netflix Tech Blog, Mercari Tech Blog,
-                            その他各種技術ブログのRSSフィードを利用しています。
-                        </p>
-                    </div>
-                    <div className="footer-links">
-                        <p>
-                            本サービスは個人学習・非営利目的で運営されています。
-                            <br />
-                            © 2025 RSS Feed Reader
-                        </p>
-                    </div>
-                </div>
-            </footer>
         </div>
     );
 }

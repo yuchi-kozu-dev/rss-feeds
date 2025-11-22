@@ -12,26 +12,34 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
         });
     };
 
+    const getBrand = (feedTitle: string) => {
+        const lowerTitle = feedTitle.toLowerCase();
+        if (lowerTitle.includes('zenn')) return 'zenn';
+        if (lowerTitle.includes('qiita')) return 'qiita';
+        if (lowerTitle.includes('youtube')) return 'youtube';
+        return 'default';
+    };
+
+    const brand = getBrand(article.feedTitle);
+
     return (
-        <article className="article-card">
+        <article className="article-card" data-brand={brand}>
+            <div className="article-meta">
+                <span className="feed-badge">{article.feedTitle}</span>
+                <span className="article-date">{formatDate(article.pubDate)}</span>
+            </div>
             <h2 className="article-title">
                 <a href={article.link} target="_blank" rel="noopener noreferrer">
                     {article.title}
                 </a>
             </h2>
-            <div className="article-meta">
-                <span className="feed-title">{article.feedTitle}</span>
-                <span className="article-date">{formatDate(article.pubDate)}</span>
-            </div>
             {article.description && (
                 <p className="article-description">
-                    {article.description.slice(0, 200)}
-                    {article.description.length > 200 ? '...' : ''}
+                    {article.description.replace(/<[^>]*>/g, '').slice(0, 120)}
+                    {article.description.length > 120 ? '...' : ''}
                 </p>
             )}
         </article>
